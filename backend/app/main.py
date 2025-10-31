@@ -1,116 +1,385 @@
 """
-ÆTHERION - Advanced AI-Powered Banking System
-Main Application Entry Point
+ÆTHERION - سیستم بانکداری نوین با هوش مصنوعی
+یک فایل - همه چیز داخلش!
+نویسنده: QalamHipHop
 """
-from fastapi import FastAPI, Request
+
+# نصب خودکار packages
+import subprocess
+import sys
+
+def install_packages():
+    """نصب خودکار packages مورد نیاز"""
+    packages = ['fastapi', 'uvicorn']
+    for package in packages:
+        try:
+            __import__(package)
+        except ImportError:
+            print(f"📦 در حال نصب {package}...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", package, "-q"])
+            print(f"✅ {package} نصب شد")
+
+# نصب packages
+install_packages()
+
+# حالا import می‌کنیم
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
-import logging
+from fastapi.responses import HTMLResponse, JSONResponse
 from datetime import datetime
+from typing import Dict, List, Optional
+import uvicorn
 
-# Import configurations
-try:
-    from app.core.config import settings
-        from app.core.database import init_db, close_db, check_database_health
-            from app.core.redis_client import redis_client
-            except ImportError:
-                # اگر فایل‌ها نیستند، از تنظیمات پیش‌فرض استفاده کن
-                    class Settings:
-                            APP_NAME = "ÆTHERION"
-                                    APP_VERSION = "1.0.0"
-                                            DEBUG = True
-                                                    BACKEND_CORS_ORIGINS = ["*"]
-                                                        settings = Settings()
+# ==================== ساخت برنامه ====================
+app = FastAPI(
+    title="ÆTHERION - اتریون",
+    description="🌟 سیستم بانکداری نوین با هوش مصنوعی",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
-                                                        # Setup Logging
-                                                        logging.basicConfig(
-                                                            level=logging.INFO,
-                                                                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-                                                                )
-                                                                logger = logging.getLogger(__name__)
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-                                                                # ================== Lifespan Events ==================
-                                                                @asynccontextmanager
-                                                                async def lifespan(app: FastAPI):
-                                                                    """مدیریت startup و shutdown"""
-                                                                        # Startup
-                                                                            logger.info("🚀 Starting ÆTHERION...")
-                                                                                
-                                                                                    try:
-                                                                                            # اتصال به Redis
-                                                                                                    if 'redis_client' in globals():
-                                                                                                                await redis_client.connect()
-                                                                                                                            logger.info("✅ Redis connected")
-                                                                                                                                except Exception as e:
-                                                                                                                                        logger.warning(f"⚠️ Redis connection failed: {e}")
-                                                                                                                                            
-                                                                                                                                                try:
-                                                                                                                                                        # اتصال به Database
-                                                                                                                                                                if 'init_db' in globals():
-                                                                                                                                                                            await init_db()
-                                                                                                                                                                                        logger.info("✅ Database initialized")
-                                                                                                                                                                                            except Exception as e:
-                                                                                                                                                                                                    logger.warning(f"⚠️ Database initialization failed: {e}")
-                                                                                                                                                                                                        
-                                                                                                                                                                                                            logger.info("✅ ÆTHERION started successfully!")
-                                                                                                                                                                                                                
-                                                                                                                                                                                                                    yield
-                                                                                                                                                                                                                        
-                                                                                                                                                                                                                            # Shutdown
-                                                                                                                                                                                                                                logger.info("🛑 Shutting down ÆTHERION...")
-                                                                                                                                                                                                                                    
-                                                                                                                                                                                                                                        try:
-                                                                                                                                                                                                                                                if 'redis_client' in globals():
-                                                                                                                                                                                                                                                            await redis_client.close()
-                                                                                                                                                                                                                                                                except:
-                                                                                                                                                                                                                                                                        pass
-                                                                                                                                                                                                                                                                            
-                                                                                                                                                                                                                                                                                try:
-                                                                                                                                                                                                                                                                                        if 'close_db' in globals():
-                                                                                                                                                                                                                                                                                                    await close_db()
-                                                                                                                                                                                                                                                                                                        except:
-                                                                                                                                                                                                                                                                                                                pass
-                                                                                                                                                                                                                                                                                                                    
-                                                                                                                                                                                                                                                                                                                        logger.info("✅ ÆTHERION shutdown complete")
+# ==================== دیتا ====================
+# قیمت‌ها (به تومان)
+PRICES = {
+    "USDT": 55000,
+    "BTC": 2500000000,
+    "ETH": 150000000,
+    "USD": 50000,
+    "EUR": 55000,
+    "ÆTHER": 1000  # توکن بومی
+}
 
-                                                                                                                                                                                                                                                                                                                        # ================== Create App ==================
-                                                                                                                                                                                                                                                                                                                        app = FastAPI(
-                                                                                                                                                                                                                                                                                                                            title=settings.APP_NAME,
-                                                                                                                                                                                                                                                                                                                                version=settings.APP_VERSION,
-                                                                                                                                                                                                                                                                                                                                    description="""
-                                                                                                                                                                                                                                                                                                                                        🌟 **سیستم بانکداری نوین با هوش مصنوعی**
-                                                                                                                                                                                                                                                                                                                                            
-                                                                                                                                                                                                                                                                                                                                                ویژگی‌ها:
-                                                                                                                                                                                                                                                                                                                                                    - کیف پول چندارزی (ریال، دلار، ارزهای دیجیتال)
-                                                                                                                                                                                                                                                                                                                                                        - درگاه‌های پرداخت ایرانی (زرین‌پال، آیدی‌پی و...)
-                                                                                                                                                                                                                                                                                                                                                            - هوش مصنوعی مالی
-                                                                                                                                                                                                                                                                                                                                                                - امنیت پیشرفته
-                                                                                                                                                                                                                                                                                                                                                                    """,
-                                                                                                                                                                                                                                                                                                                                                                        docs_url="/docs",
-                                                                                                                                                                                                                                                                                                                                                                            redoc_url="/redoc",
-                                                                                                                                                                                                                                                                                                                                                                                lifespan=lifespan,
-                                                                                                                                                                                                                                                                                                                                                                                    debug=settings.DEBUG
-                                                                                                                                                                                                                                                                                                                                                                                    )
+# کاربران دمو
+demo_users = {}
+demo_wallets = {}
 
-                                                                                                                                                                                                                                                                                                                                                                                    # ================== CORS Middleware ==================
-                                                                                                                                                                                                                                                                                                                                                                                    app.add_middleware(
-                                                                                                                                                                                                                                                                                                                                                                                        CORSMiddleware,
-                                                                                                                                                                                                                                                                                                                                                                                            allow_origins=settings.BACKEND_CORS_ORIGINS,
-                                                                                                                                                                                                                                                                                                                                                                                                allow_credentials=True,
-                                                                                                                                                                                                                                                                                                                                                                                                    allow_methods=["*"],
-                                                                                                                                                                                                                                                                                                                                                                                                        allow_headers=["*"],
-                                                                                                                                                                                                                                                                                                                                                                                                        )
+# ==================== صفحه اصلی ====================
+@app.get("/", response_class=HTMLResponse)
+async def home():
+    """صفحه اصلی زیبا"""
+    return """
+    <!DOCTYPE html>
+    <html dir="rtl" lang="fa">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ÆTHERION - سیستم بانکداری هوشمند</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+                font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                padding: 20px;
+            }
+            .container {
+                max-width: 900px;
+                margin: 0 auto;
+                background: white;
+                border-radius: 20px;
+                padding: 40px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            }
+            h1 {
+                color: #667eea;
+                font-size: 3em;
+                text-align: center;
+                margin-bottom: 10px;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            }
+            .emoji { font-size: 1.5em; }
+            .subtitle {
+                text-align: center;
+                color: #718096;
+                font-size: 1.2em;
+                margin-bottom: 30px;
+            }
+            .status-box {
+                background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+                color: white;
+                padding: 20px;
+                border-radius: 15px;
+                text-align: center;
+                font-size: 1.3em;
+                margin: 20px 0;
+                box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin: 30px 0;
+            }
+            .card {
+                background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+                padding: 20px;
+                border-radius: 12px;
+                text-align: center;
+                border: 2px solid #e2e8f0;
+                transition: all 0.3s;
+            }
+            .card:hover {
+                transform: translateY(-5px);
+                border-color: #667eea;
+                box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+            }
+            .card-icon { font-size: 2.5em; margin-bottom: 10px; }
+            .card-title { font-weight: bold; color: #2d3748; margin-bottom: 5px; }
+            .card-value { color: #667eea; font-size: 1.1em; }
+            .button {
+                display: block;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 15px 30px;
+                border-radius: 10px;
+                text-decoration: none;
+                text-align: center;
+                font-weight: bold;
+                margin: 10px 0;
+                transition: all 0.3s;
+                border: none;
+                cursor: pointer;
+            }
+            .button:hover {
+                transform: scale(1.02);
+                box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+            }
+            .info-box {
+                background: #edf2f7;
+                padding: 20px;
+                border-radius: 10px;
+                margin: 20px 0;
+                border-right: 4px solid #667eea;
+            }
+            .info-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 0;
+                border-bottom: 1px solid #cbd5e0;
+            }
+            .info-row:last-child { border: none; }
+            @media (max-width: 600px) {
+                h1 { font-size: 2em; }
+                .container { padding: 20px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1><span class="emoji">🌟</span> ÆTHERION</h1>
+            <p class="subtitle">سیستم بانکداری نوین با هوش مصنوعی</p>
+            
+            <div class="status-box">
+                ✅ سیستم با موفقیت در حال اجراست!
+            </div>
+            
+            <div class="grid">
+                <div class="card">
+                    <div class="card-icon">💰</div>
+                    <div class="card-title">کیف پول</div>
+                    <div class="card-value">چندارزی</div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🔄</div>
+                    <div class="card-title">تبدیل ارز</div>
+                    <div class="card-value">آنی</div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🤖</div>
+                    <div class="card-title">هوش مصنوعی</div>
+                    <div class="card-value">مشاور مالی</div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">🔒</div>
+                    <div class="card-title">امنیت</div>
+                    <div class="card-value">پیشرفته</div>
+                </div>
+            </div>
+            
+            <div class="info-box">
+                <h3 style="color: #2d3748; margin-bottom: 15px;">📊 اطلاعات سیستم</h3>
+                <div class="info-row">
+                    <span>نسخه:</span>
+                    <span style="color: #667eea;">1.0.0</span>
+                </div>
+                <div class="info-row">
+                    <span>توسعه‌دهنده:</span>
+                    <span style="color: #667eea;">QalamHipHop</span>
+                </div>
+                <div class="info-row">
+                    <span>وضعیت:</span>
+                    <span style="color: #48bb78;">✅ آنلاین</span>
+                </div>
+            </div>
+            
+            <a href="/docs" class="button">📚 مستندات API (Swagger)</a>
+            <a href="/api/prices" class="button">💹 قیمت‌های لحظه‌ای</a>
+            <a href="/health" class="button">🏥 وضعیت سیستم</a>
+        </div>
+    </body>
+    </html>
+    """
 
-                                                                                                                                                                                                                                                                                                                                                                                                        # ================== Security Headers Middleware ==================
-                                                                                                                                                                                                                                                                                                                                                                                                        @app.middleware("http")
-                                                                                                                                                                                                                                                                                                                                                                                                        async def add_security_headers(request: Request, call_next):
-                                                                                                                                                                                                                                                                                                                                                                                                            response = await call_next(request)
-                                                                                                                                                                                                                                                                                                                                                                                                                response.headers["X-Frame-Options"] = "DENY"
-                                                                                                                                                                                                                                                                                                                                                                                                                    response.headers["X-Content-Type-Options"] = "nosniff"
-                                                                                                                                                                                                                                                                                                                                                                                                                        response.headers["X-XSS-Protection"] = "1; mode=block"
-                                                                                                                                                                                                                                                                                                                                                                                                                            return response
+# ==================== API Endpoints ====================
+
+@app.get("/health")
+async def health_check():
+    """بررسی سلامت سیستم"""
+    return {
+        "status": "healthy",
+        "message": "✅ ÆTHERION به خوبی کار می‌کند",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0",
+        "uptime": "running"
+    }
+
+@app.get("/api/prices")
+async def get_prices():
+    """قیمت‌های ارزها"""
+    return {
+        "timestamp": datetime.now().isoformat(),
+        "base": "IRR",
+        "note": "قیمت‌ها به تومان",
+        "prices": {
+            currency: {
+                "buy": price,
+                "sell": int(price * 0.98),
+                "currency": currency
+            }
+            for currency, price in PRICES.items()
+        }
+    }
+
+@app.post("/api/convert")
+async def convert_currency(
+    from_currency: str,
+    to_currency: str, 
+    amount: float
+):
+    """تبدیل ارز"""
+    
+    currencies = {"IRR": 1, **PRICES}
+    
+    if from_currency not in currencies or to_currency not in currencies:
+        raise HTTPException(
+            status_code=400,
+            detail=f"ارز نامعتبر! ارزهای معتبر: {', '.join(currencies.keys())}"
+        )
+    
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="مقدار باید بزرگتر از صفر باشد")
+    
+    # تبدیل به ریال
+    amount_irr = amount * currencies[from_currency]
+    
+    # تبدیل به ارز مقصد
+    result = amount_irr / currencies[to_currency]
+    
+    # کارمزد 0.1%
+    fee = result * 0.001
+    final = result - fee
+    
+    return {
+        "success": True,
+        "from": {
+            "currency": from_currency,
+            "amount": amount
+        },
+        "to": {
+            "currency": to_currency,
+            "amount": round(final, 8),
+            "amount_before_fee": round(result, 8)
+        },
+        "fee": round(fee, 8),
+        "fee_percent": "0.1%",
+        "rate": round(currencies[to_currency] / currencies[from_currency], 8),
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/api/demo/wallet")
+async def demo_wallet():
+    """کیف پول نمونه"""
+    return {
+        "user": "کاربر نمونه",
+        "user_id": "demo_123",
+        "wallets": [
+            {
+                "currency": "IRR",
+                "name": "ریال ایران",
+                "balance": 50000000,
+                "balance_formatted": "50,000,000 تومان",
+                "icon": "💵"
+            },
+            {
+                "currency": "USDT",
+                "name": "تتر",
+                "balance": 1000,
+                "balance_irr": 1000 * PRICES["USDT"],
+                "icon": "💰"
+            },
+            {
+                "currency": "BTC",
+                "name": "بیت‌کوین",
+                "balance": 0.002,
+                "balance_irr": 0.002 * PRICES["BTC"],
+                "icon": "₿"
+            },
+            {
+                "currency": "ÆTHER",
+                "name": "توکن اتریون",
+                "balance": 1000,
+                "balance_irr": 1000 * PRICES["ÆTHER"],
+                "icon": "⚡"
+            }
+        ],
+        "total_irr": 50000000 + (1000 * PRICES["USDT"]) + (0.002 * PRICES["BTC"]) + (1000 * PRICES["ÆTHER"])
+    }
+
+@app.get("/api/info")
+async def system_info():
+    """اطلاعات سیستم"""
+    return {
+        "app": "ÆTHERION",
+        "app_fa": "اتریون",
+        "version": "1.0.0",
+        "description": "سیستم بانکداری نوین با هوش مصنوعی",
+        "developer": "QalamHipHop",
+        "repository": "https://github.com/QalamHipHop/-THERION",
+        "features": {
+            "wallet": "کیف پول چندارزی",
+            "exchange": "تبدیل ارز",
+            "ai": "هوش مصنوعی مالی",
+            "payment": "درگاه‌های پرداخت ایرانی"
+        },
+        "supported_currencies": list(PRICES.keys()),
+        "status": "operational",
+        "timestamp": datetime.now().isoformat()
+    }
+
+# ==================== اجرا ====================
+if __name__ == "__main__":
+    print("=" * 50)
+    print("🌟 ÆTHERION - سیستم بانکداری نوین")
+    print("=" * 50)
+    print("🚀 در حال راه‌اندازی...")
+    print()
+    
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info"
+    )                                                                                                                                                                                                                                                                                                                                                                                                                            return response
 
                                                                                                                                                                                                                                                                                                                                                                                                                             # ================== Request Logging Middleware ==================
                                                                                                                                                                                                                                                                                                                                                                                                                             @app.middleware("http")
