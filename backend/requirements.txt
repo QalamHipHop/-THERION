@@ -46,7 +46,7 @@ tiktoken==0.6.0
 
 # ================== SMS & Communication ==================
 kavenegar==1.1.2
-ghasedak==1.0.1
+#ghasedak==1.0.1
 
 # ================== Email ==================
 fastapi-mail==1.4.1
